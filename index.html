@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quilly</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#F2F2F7">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=DM+Mono:wght@400&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --quilly-blue: #007AFF; 
+            --quilly-deep: #0056b3;
+            --danger-red: #FF3B30;
+            --calendar-gradient: linear-gradient(135deg, #FF2E93, #FF8C42);
+            --calc-icon-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            
+            --bg-color: #F2F2F7;
+            --text-primary: #1C1C1E;
+            --text-secondary: #8E8E93;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --header-bg: rgba(242, 242, 247, 0.95);
+            
+            --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
+            --shadow-active: 0 12px 30px rgba(0, 122, 255, 0.2);
+            --glass-border: rgba(255,255,255,0.6);
+            --pinned-bg: rgba(240, 248, 255, 0.95);
+            
+            --calc-bg: #F2F2F7;
+            --calc-btn-bg: #FFFFFF;
+            --calc-text: #000;
+        }
+
+        body.dark-mode {
+            --bg-color: #000000;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --card-bg: rgba(28, 28, 30, 0.8);
+            --header-bg: rgba(0, 0, 0, 0.9);
+            
+            --shadow-sm: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-active: 0 12px 30px rgba(10, 132, 255, 0.2);
+            --glass-border: rgba(255,255,255,0.1);
+            --pinned-bg: rgba(20, 35, 50, 0.9);
+            
+            --calc-bg: #000000;
+            --calc-btn-bg: #1C1C1E;
+            --calc-text: #FFF;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh; overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+
+        .icon-svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+        .icon-svg-fill { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+
+        /* SPLASH SCREEN */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .splash-content { position: relative; width: 300px; height: 200px; display: flex; justify-content: center; align-items: center; }
+        #splash-logo {
+            width: 85px; height: auto; position: absolute; top: 0; left: 0; z-index: 3;
+            offset-anchor: 0% 100%; offset-path: path('M 20 150 C 80 50, 220 250, 280 150');
+            offset-distance: 0%; offset-rotate: auto 5deg; margin-left: -2px; margin-top: 2px;
+            animation: movePencil 2s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+        }
+        @keyframes movePencil { to { offset-distance: 100%; } }
+        .drawing-svg { position: absolute; width: 300px; height: 200px; top: 0; left: 0; z-index: 2; }
+        .curvy-line {
+            fill: none; stroke: var(--quilly-blue); stroke-width: 6; stroke-linecap: round;
+            stroke-dasharray: 1000; stroke-dashoffset: 1000;
+            animation: drawLine 2s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+        }
+        @keyframes drawLine { to { stroke-dashoffset: 0; } }
+        .splash-exit { animation: portalExpand 0.8s cubic-bezier(0.7, 0, 0.2, 1) forwards; pointer-events: none; }
+        @keyframes portalExpand { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+        .app-enter { animation: appZoomIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes appZoomIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* LAYOUT */
+        #app-container { opacity: 0; height: 100%; display: flex; flex-direction: column; }
+        header {
+            flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; padding-top: calc(15px + env(safe-area-inset-top));
+            background: var(--header-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 100; border-bottom: 1px solid var(--glass-border);
+        }
+        main { flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+        .header-logo-group { display: flex; align-items: center; gap: 12px; }
+        .header-logo { width: 34px; height: 34px; border-radius: 9px; box-shadow: var(--shadow-sm); }
+        .header-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+
+        .glass-calc-icon {
+            width: 32px; height: 32px; border-radius: 10px; background: var(--calc-icon-gradient);
+            border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 10px rgba(79, 172, 254, 0.4), inset 0 2px 4px rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: transform 0.2s; position: relative; overflow: hidden;
+        }
+        .glass-calc-icon:active { transform: scale(0.92); }
+        .glass-calc-icon::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent); border-radius: 10px 10px 0 0; }
+        .calc-symbols { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 8px; font-weight: 800; color: white; line-height: 1; }
+
+        .toggle-wrapper { position: relative; width: 60px; height: 30px; border-radius: 30px; overflow: hidden; cursor: pointer; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2), 0 2px 5px rgba(255,255,255,0.1); }
+        #theme-checkbox { display: none; }
+        .toggle-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #4fa3f7, #86c4f7); transition: opacity 0.4s ease; }
+        .toggle-bg-night { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #1a1e29, #2b3242); opacity: 0; transition: opacity 0.4s ease; }
+        .clouds { position: absolute; width: 100%; height: 100%; top: 0; left: 0; transition: transform 0.4s ease; }
+        .clouds::before, .clouds::after { content: ''; position: absolute; background: rgba(255,255,255,0.8); border-radius: 50%; }
+        .clouds::before { width: 20px; height: 20px; top: 15px; right: 5px; }
+        .clouds::after { width: 25px; height: 25px; top: 12px; right: 18px; }
+        .stars { position: absolute; top: 5px; left: 5px; width: 30px; height: 20px; opacity: 0; transition: opacity 0.4s ease; }
+        .stars::before, .stars::after { content: '✦'; color: white; position: absolute; font-size: 8px; }
+        .stars::before { top: 2px; left: 15px; font-size: 6px; }
+        .stars::after { top: 12px; left: 5px; }
+        .toggle-switch { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #FFD700; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.2), 1px 2px 4px rgba(0,0,0,0.3); transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), background 0.4s; z-index: 2; }
+        .toggle-switch::before, .toggle-switch::after { content: ''; position: absolute; background: #b8b8b8; border-radius: 50%; opacity: 0; transition: opacity 0.2s; }
+        .toggle-switch::before { width: 6px; height: 6px; top: 5px; left: 8px; }
+        .toggle-switch::after { width: 4px; height: 4px; top: 14px; left: 12px; }
+        #theme-checkbox:checked ~ .toggle-bg-night { opacity: 1; }
+        #theme-checkbox:checked ~ .stars { opacity: 1; }
+        #theme-checkbox:checked ~ .clouds { transform: translateY(20px); }
+        #theme-checkbox:checked ~ .toggle-switch { transform: translateX(30px); background: #d0d0d0; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4), 1px 2px 4px rgba(0,0,0,0.5); }
+        #theme-checkbox:checked ~ .toggle-switch::before, #theme-checkbox:checked ~ .toggle-switch::after { opacity: 1; }
+
+        .calendar-card { background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 20px 15px; margin-bottom: 25px; box-shadow: var(--shadow-sm); background-image: linear-gradient(to bottom right, rgba(255,255,255,0.1), rgba(255,255,255,0)); }
+        .cal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; padding: 0 10px; }
+        .cal-title-group { display: flex; flex-direction: column; }
+        .cal-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); font-weight: 700; margin-bottom: 4px; }
+        .cal-month { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); }
+        .cal-week-view { display: flex; justify-content: space-between; text-align: center; }
+        .day-item { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 4px; min-width: 40px; border-radius: 20px; cursor: pointer; transition: transform 0.2s; }
+        .day-item:active { transform: scale(0.95); }
+        .day-name { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; }
+        .day-number { font-size: 1rem; font-weight: 600; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--text-primary); }
+        .day-item.active .day-number { background: var(--calendar-gradient); color: white; box-shadow: 0 4px 12px rgba(255, 46, 147, 0.4); }
+        .day-item.active .day-name { color: var(--quilly-blue); font-weight: 700; }
+
+        .input-card { background: var(--card-bg); padding: 20px; border-radius: 24px; margin-bottom: 30px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .input-card:focus-within { transform: translateY(-2px); box-shadow: var(--shadow-active); border-color: rgba(0, 122, 255, 0.3); }
+        .rich-input { width: 100%; min-height: 80px; max-height: 200px; background: transparent; border: none; color: var(--text-primary); font-size: 1.15rem; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; resize: none; outline: none; line-height: 1.6; }
+        .rich-input::placeholder { color: var(--text-secondary); opacity: 0.6; }
+        .action-row { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .toolbar-group { display: flex; gap: 8px; align-items: center; }
+
+        /* UNIFIED BUTTON STYLES FOR Aa AND IMAGE */
+        .glass-btn-style {
+            background: rgba(120, 120, 120, 0.08); border: 1px solid var(--glass-border); border-radius: 14px; 
+            padding: 8px 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; 
+            transition: all 0.2s; font-weight: 600; color: var(--text-primary);
+            height: 40px; min-width: 50px;
+        }
+        .glass-btn-style:hover { background: rgba(120, 120, 120, 0.15); }
+        .glass-btn-style:active { transform: scale(0.96); }
+
+        .custom-dropdown { position: relative; display: inline-block; }
+        .dropdown-menu { position: absolute; top: 120%; left: 0; width: 160px; background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 16px; box-shadow: var(--shadow-active); padding: 6px; z-index: 100; display: none; transform-origin: top left; backdrop-filter: blur(20px); }
+        .dropdown-menu.show { display: block; animation: springDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes springDown { 0% { opacity: 0; transform: scale(0.8) translateY(-10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        .dropdown-item { padding: 10px; border-radius: 10px; cursor: pointer; color: var(--text-primary); font-size: 0.95rem; margin-bottom: 2px; }
+        .dropdown-item:hover { background: rgba(120, 120, 120, 0.1); }
+        .dropdown-item.selected { background: var(--quilly-blue); color: white; }
+
+        .image-preview-container { margin-top: 10px; display: none; }
+        .image-preview-container img { max-width: 100%; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-height: 200px; object-fit: cover; }
+        .remove-img-btn { margin-top: 5px; color: var(--danger-red); font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: right; }
+
+        .btn-3d { border: none; padding: 10px 24px; border-radius: 99px; font-weight: 600; font-size: 0.95rem; cursor: pointer; position: relative; overflow: hidden; transition: transform 0.1s; }
+        .btn-3d:active { transform: scale(0.96); }
+        .save-btn, .btn-update { color: white; background: linear-gradient(170deg, #007AFF 0%, #0056b3 100%); box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3); }
+        .btn-delete-confirm { color: white; background: linear-gradient(170deg, #FF3B30 0%, #c62828 100%); box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3); }
+        .btn-cancel { background: rgba(120, 120, 120, 0.1); color: var(--text-primary); margin-right: 10px; }
+
+        /* GRID LAYOUT (ALWAYS EXPANDED) */
+        .notes-grid { display: grid; gap: 15px; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); }
+        
+        .note-card { background: var(--card-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); padding: 20px; border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); overflow: hidden; animation: popUp 0.3s ease-out; }
+        .note-image { width: 100%; height: 160px; object-fit: cover; border-radius: 14px; margin-bottom: 12px; display: block; }
+        .note-text { font-size: 1.05rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 40px; white-space: pre-wrap; font-weight: 400; }
+        .note-footer { position: absolute; bottom: 15px; left: 20px; right: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .note-date { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; opacity: 0.7; }
+        .card-actions { display: flex; gap: 8px; align-items: center; }
+        .icon-btn { background: transparent; padding: 8px; border-radius: 50%; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border: none; }
+        .icon-btn:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+        .icon-btn.active-pin { background: rgba(0, 122, 255, 0.1); color: var(--quilly-blue); }
+        .icon-btn.delete-btn:hover { color: #ff3b30; background: rgba(255, 59, 48, 0.1); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 2000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
+        .modal-overlay.open { display: flex; opacity: 1; }
+        .modal-content { background: var(--card-bg); width: 90%; max-width: 500px; border-radius: 28px; padding: 25px; box-shadow: var(--shadow-active); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-overlay.open .modal-content { transform: scale(1); }
+        .modal-title { margin-bottom: 10px; font-weight: 700; font-size: 1.3rem; }
+        .modal-msg { color: var(--text-secondary); margin-bottom: 25px; font-size: 1rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-actions.center { justify-content: center; }
+        .empty-state { text-align: center; color: var(--text-secondary); margin-top: 60px; opacity: 0.6; font-weight: 500; }
+        @keyframes popUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .calc-content { background: var(--calc-bg); border-radius: 30px; padding: 25px; width: 100%; max-width: 320px; box-shadow: var(--shadow-active); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: scale(0.5) translateY(50px); opacity: 0; }
+        .modal-overlay.open .calc-content { transform: scale(1) translateY(0); opacity: 1; }
+        .calc-display { width: 100%; margin-bottom: 20px; text-align: right; }
+        .calc-equation { font-size: 0.9rem; color: var(--text-secondary); min-height: 1.2rem; margin-bottom: 5px; }
+        .calc-result { font-size: 2.8rem; font-weight: 300; color: var(--calc-text); overflow-x: auto; white-space: nowrap; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .calc-btn { width: 100%; aspect-ratio: 1; border-radius: 18px; border: none; background: var(--calc-btn-bg); color: var(--calc-text); font-size: 1.3rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: all 0.1s; display: flex; align-items: center; justify-content: center; }
+        .calc-btn:active { transform: scale(0.92); background: rgba(0,0,0,0.05); }
+        .calc-btn.accent { background: var(--quilly-blue); color: white; box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3); }
+        .calc-btn.accent:active { background: var(--quilly-deep); }
+        .calc-btn.vertical { aspect-ratio: auto; grid-row: span 2; }
+
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="splash-content">
+            <img id="splash-logo" src="https://i.ibb.co/twkXFkD4/1000211821-removebg-preview.png" alt="Quilly Pencil">
+            <svg class="drawing-svg" viewBox="0 0 300 200">
+                <path class="curvy-line" d="M 20 150 C 80 50, 220 250, 280 150" />
+            </svg>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <header>
+            <div class="header-logo-group">
+                <img class="header-logo" src="https://i.ibb.co/tM9rP9d7/1770450790341.png" alt="Icon">
+                <div class="header-title">Quilly</div>
+            </div>
+            
+            <div class="header-actions">
+                <button class="glass-calc-icon" onclick="openCalculator()">
+                    <div class="calc-symbols"><span>+</span><span>-</span><span>×</span><span>=</span></div>
+                </button>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()">
+                    <div class="toggle-bg"></div><div class="toggle-bg-night"></div>
+                    <div class="clouds"></div><div class="stars"></div><div class="toggle-switch"></div>
+                </label>
+            </div>
+        </header>
+
+        <main>
+            <div class="calendar-card">
+                <div class="cal-header">
+                    <div class="cal-title-group">
+                        <div class="cal-label">Today</div>
+                        <div id="cal-current-month" class="cal-month">August</div>
+                    </div>
+                </div>
+                <div class="cal-week-view" id="calendar-days"></div>
+            </div>
+
+            <div class="input-card">
+                <textarea id="note-input" class="rich-input" placeholder="Write something new..."></textarea>
+                
+                <div id="image-preview" class="image-preview-container">
+                    <img id="preview-img" src="" alt="Preview">
+                    <div class="remove-img-btn" onclick="removeImage()">Remove Image</div>
+                </div>
+
+                <div class="action-row">
+                    <div class="toolbar-group">
+                        <div class="custom-dropdown" id="main-font-dropdown">
+                            <div class="glass-btn-style dropdown-trigger" onclick="toggleDropdown('main-font-dropdown')">
+                                <span style="font-size:1.1rem; font-weight:700;">Aa</span>
+                            </div>
+                            <div class="dropdown-menu"></div>
+                        </div>
+                        
+                        <button class="glass-btn-style" onclick="document.getElementById('file-input').click()">
+                            <img src="https://i.ibb.co/Pv85zNV7/IMG-20260207-154954.png" alt="Add Image" style="width: 22px; height: 22px; object-fit: contain;">
+                        </button>
+                        <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleImageUpload(this)">
+                    </div>
+                    
+                    <button class="btn-3d save-btn" onclick="saveNote()">Save</button>
+                </div>
+            </div>
+
+            <div id="notes-grid" class="notes-grid"></div>
+            
+            <div id="empty-msg" class="empty-state" style="display:none;"><p>No notes yet.<br>Start writing!</p></div>
+        </main>
+    </div>
+
+    <div id="calc-modal" class="modal-overlay">
+        <div class="calc-content" onclick="event.stopPropagation()">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span style="font-weight:700; color:var(--text-secondary);">Calculator</span>
+                <span style="cursor:pointer; opacity:0.6;" onclick="closeCalculator()">✕</span>
+            </div>
+            <div class="calc-display"><div class="calc-equation" id="calc-eq"></div><div class="calc-result" id="calc-res">0</div></div>
+            <div class="calc-grid">
+                <button class="calc-btn" onclick="calcClear()">AC</button><button class="calc-btn" onclick="calcDelete()">⌫</button><button class="calc-btn" onclick="calcAppend('%')">%</button><button class="calc-btn" onclick="calcAppend('/')">÷</button>
+                <button class="calc-btn" onclick="calcAppend('7')">7</button><button class="calc-btn" onclick="calcAppend('8')">8</button><button class="calc-btn" onclick="calcAppend('9')">9</button><button class="calc-btn" onclick="calcAppend('*')">×</button>
+                <button class="calc-btn" onclick="calcAppend('4')">4</button><button class="calc-btn" onclick="calcAppend('5')">5</button><button class="calc-btn" onclick="calcAppend('6')">6</button><button class="calc-btn" onclick="calcAppend('-')">-</button>
+                <button class="calc-btn" onclick="calcAppend('1')">1</button><button class="calc-btn" onclick="calcAppend('2')">2</button><button class="calc-btn" onclick="calcAppend('3')">3</button><button class="calc-btn vertical" onclick="calcAppend('+')">+</button>
+                <button class="calc-btn" onclick="calcAppend('0')">0</button><button class="calc-btn" onclick="calcAppend('.')">.</button><button class="calc-btn accent" onclick="calcSolve()">=</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px; text-align: left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 class="modal-title" style="margin:0;">Edit Note</h3>
+                <div class="toolbar-group">
+                    <div class="custom-dropdown" id="edit-font-dropdown">
+                        <div class="glass-btn-style dropdown-trigger" onclick="toggleDropdown('edit-font-dropdown')"><span style="font-size:1.1rem; font-weight:700;">Aa</span></div><div class="dropdown-menu"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="edit-image-container" style="display:none; margin-bottom:15px;">
+                <img id="edit-preview-img" src="" style="width:100%; max-height:150px; object-fit:cover; border-radius:12px;">
+                <div class="remove-img-btn" onclick="removeEditImage()">Remove Image</div>
+            </div>
+            <textarea id="edit-textarea" class="rich-input" style="min-height:200px; border:1px solid var(--glass-border); border-radius:16px; padding:15px; background:rgba(120,120,120,0.05);"></textarea>
+            <div class="modal-actions" style="margin-top:20px;">
+                <button class="btn-3d btn-cancel" onclick="closeEditModal()">Cancel</button><button class="btn-3d btn-update" onclick="updateNote()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="modal-title">Delete Note?</h3><p class="modal-msg">Are you sure to delete this?</p>
+            <div class="modal-actions center"><button class="btn-3d btn-cancel" onclick="closeDeleteModal()">Cancel</button><button class="btn-3d btn-delete-confirm" onclick="confirmDelete()">Delete</button></div>
+        </div>
+    </div>
+
+    <script>
+        const body = document.body;
+        const themeCheckbox = document.getElementById('theme-checkbox');
+        let isDarkMode = localStorage.getItem('quillyDarkMode') === 'true';
+        function applyTheme() { if (isDarkMode) { body.classList.add('dark-mode'); themeCheckbox.checked = true; } else { body.classList.remove('dark-mode'); themeCheckbox.checked = false; } }
+        applyTheme();
+        function toggleTheme() { isDarkMode = themeCheckbox.checked; localStorage.setItem('quillyDarkMode', isDarkMode); applyTheme(); }
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        function initCalendar() {
+            const now = new Date(); document.getElementById('cal-current-month').innerText = monthNames[now.getMonth()];
+            const daysContainer = document.getElementById('calendar-days'); daysContainer.innerHTML = '';
+            const todayDay = now.getDay(); const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - todayDay);
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek); day.setDate(startOfWeek.getDate() + i);
+                const isToday = day.getDate() === now.getDate() && day.getMonth() === now.getMonth();
+                const dayEl = document.createElement('div'); dayEl.className = `day-item ${isToday ? 'active' : ''}`;
+                dayEl.innerHTML = `<span class="day-name">${dayNames[day.getDay()]}</span><span class="day-number">${day.getDate()}</span>`;
+                daysContainer.appendChild(dayEl);
+            }
+        }
+
+        const calcModal = document.getElementById('calc-modal');
+        const calcRes = document.getElementById('calc-res');
+        const calcEq = document.getElementById('calc-eq');
+        let calcExpression = '';
+        function openCalculator() { calcModal.classList.add('open'); }
+        function closeCalculator() { calcModal.classList.remove('open'); }
+        calcModal.addEventListener('click', (e) => { if (e.target === calcModal) closeCalculator(); });
+        function calcAppend(val) { calcExpression += val; calcRes.innerText = calcExpression; }
+        function calcClear() { calcExpression = ''; calcRes.innerText = '0'; calcEq.innerText = ''; }
+        function calcDelete() { calcExpression = calcExpression.slice(0, -1); calcRes.innerText = calcExpression || '0'; }
+        function calcSolve() { try { const result = eval(calcExpression); calcEq.innerText = calcExpression + ' ='; calcRes.innerText = result; calcExpression = String(result); } catch (e) { calcRes.innerText = 'Error'; } }
+
+        const fonts = [{ name: "System", family: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" }, { name: "Serif", family: "'Lora', serif" }, { name: "Mono", family: "'DM Mono', monospace" }, { name: "Rounded", family: "'Nunito', sans-serif" }, { name: "Sketch", family: "'Caveat', cursive" }];
+        let currentMainFont = fonts[0].family; let currentEditFont = fonts[0].family;
+        function initDropdowns() {
+            const dropdowns = ['main-font-dropdown', 'edit-font-dropdown'];
+            dropdowns.forEach(id => {
+                const container = document.querySelector(`#${id} .dropdown-menu`);
+                fonts.forEach(font => {
+                    const item = document.createElement('div'); item.className = 'dropdown-item'; item.style.fontFamily = font.family; item.textContent = font.name;
+                    item.onclick = (e) => { e.stopPropagation(); selectFont(id, font.family); }; container.appendChild(item);
+                });
+            });
+        }
+        function toggleDropdown(id) { const menu = document.querySelector(`#${id} .dropdown-menu`); const isOpen = menu.classList.contains('show'); document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show')); if (!isOpen) menu.classList.add('show'); }
+        function selectFont(dropdownId, fontFamily) {
+            const wrapper = document.getElementById(dropdownId); const menu = wrapper.querySelector('.dropdown-menu');
+            menu.querySelectorAll('.dropdown-item').forEach(item => { if (item.style.fontFamily.includes(fontFamily.split(',')[0].replace(/'/g, ''))) { item.classList.add('selected'); } else { item.classList.remove('selected'); } });
+            if (dropdownId === 'main-font-dropdown') { currentMainFont = fontFamily; document.getElementById('note-input').style.fontFamily = fontFamily; } else { currentEditFont = fontFamily; document.getElementById('edit-textarea').style.fontFamily = fontFamily; }
+            menu.classList.remove('show');
+        }
+        window.onclick = function(event) { if (!event.target.closest('.custom-dropdown')) { document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show')); } }
+
+        let currentImage = null; let currentEditImage = null;
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image(); img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                        const MAX_WIDTH = 800; const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        currentImage = canvas.toDataURL('image/jpeg', 0.7);
+                        document.getElementById('preview-img').src = currentImage; document.getElementById('image-preview').style.display = 'block';
+                    }
+                }; reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function removeImage() { currentImage = null; document.getElementById('image-preview').style.display = 'none'; document.getElementById('file-input').value = ''; }
+        function removeEditImage() { currentEditImage = null; document.getElementById('edit-image-container').style.display = 'none'; }
+
+        window.addEventListener('load', () => {
+            initDropdowns(); initCalendar();
+            const splashScreen = document.getElementById('splash-screen'); const appContainer = document.getElementById('app-container'); const path = document.querySelector('.curvy-line'); const length = path.getTotalLength(); path.style.strokeDasharray = length; path.style.strokeDashoffset = length;
+            setTimeout(() => { splashScreen.classList.add('splash-exit'); appContainer.classList.add('app-enter'); appContainer.style.opacity = '1'; setTimeout(() => { splashScreen.style.display = 'none'; }, 800); }, 2200); 
+        });
+
+        const noteInput = document.getElementById('note-input');
+        const notesGrid = document.getElementById('notes-grid');
+        const emptyMsg = document.getElementById('empty-msg');
+        let notes = JSON.parse(localStorage.getItem('quillyNotesV13')) || [];
+        let noteToDeleteId = null;
+
+        noteInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
+
+        function saveData() { localStorage.setItem('quillyNotesV13', JSON.stringify(notes)); renderNotes(); }
+
+        function renderNotes() {
+            notesGrid.innerHTML = '';
+            if (notes.length === 0) { emptyMsg.style.display = 'block'; return; }
+            emptyMsg.style.display = 'none';
+
+            const sortedNotes = notes.sort((a, b) => { if (a.pinned === b.pinned) return b.id - a.id; return a.pinned ? -1 : 1; });
+
+            sortedNotes.forEach((note, index) => {
+                const card = document.createElement('div');
+                card.className = `note-card ${note.pinned ? 'pinned' : ''}`;
+                card.onclick = (e) => { if (!e.target.closest('.card-actions')) { openEditModal(note.id); } };
+
+                const pinIcon = `<svg class="icon-svg-fill" viewBox="0 0 24 24"><path d="M16,9V4h1c0.55,0,1-0.45,1-1s-0.45-1-1-1H7C6.45,2,6,2.45,6,3s0.45,1,1,1h1v5c0,1.66-1.34,3-3,3v2h5.97v7l1,1l1-1v-7H19v-2C17.34,12,16,10.66,16,9z"/></svg>`;
+                const copyIcon = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                const imgHTML = note.image ? `<img src="${note.image}" class="note-image" alt="Attachment">` : '';
+
+                card.innerHTML = `
+                    ${imgHTML}
+                    <div class="note-text" style="font-family: ${note.font || fonts[0].family}">${note.text}</div>
+                    <div class="note-footer">
+                        <span class="note-date">${new Date(note.id).toLocaleDateString()}</span>
+                        <div class="card-actions">
+                            <button class="icon-btn" title="Copy" onclick="copyNote('${note.text.replace(/'/g, "\\'")}')">${copyIcon}</button>
+                            <button class="icon-btn ${note.pinned ? 'active-pin' : ''}" onclick="togglePin(${note.id})">${pinIcon}</button>
+                            <button class="icon-btn delete-btn" onclick="openDeleteModal(${note.id})"><svg class="icon-svg" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                        </div>
+                    </div>
+                `;
+                notesGrid.appendChild(card);
+            });
+        }
+
+        function saveNote() {
+            const text = noteInput.value.trim();
+            if (text || currentImage) {
+                notes.push({ id: Date.now(), text: text, image: currentImage, pinned: false, font: currentMainFont });
+                noteInput.value = ''; noteInput.style.height = 'auto'; removeImage(); saveData();
+            }
+        }
+
+        function togglePin(id) { const note = notes.find(n => n.id === id); if (note) { note.pinned = !note.pinned; saveData(); } }
+        
+        // BLOOP SOUND FOR COPY
+        const bloopSound = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..."); // Placeholder base64 for briefness
+        
+        function copyNote(text) { 
+            navigator.clipboard.writeText(text);
+            // Simulating a short bloop sound since real Base64 is too long for this snippet
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+            osc.connect(gain);
+            gain.connect(context.destination);
+            osc.type = 'sine';
+            osc.frequency.value = 800;
+            gain.gain.setValueAtTime(0.1, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, context.currentTime + 0.15);
+            osc.start(context.currentTime);
+            osc.stop(context.currentTime + 0.15);
+        }
+
+        const deleteModal = document.getElementById('delete-modal');
+        function openDeleteModal(id) { noteToDeleteId = id; deleteModal.classList.add('open'); }
+        function closeDeleteModal() { deleteModal.classList.remove('open'); noteToDeleteId = null; }
+        function confirmDelete() { if (noteToDeleteId) { notes = notes.filter(n => n.id !== noteToDeleteId); saveData(); closeDeleteModal(); } }
+        deleteModal.addEventListener('click', (e) => { if(e.target === deleteModal) closeDeleteModal(); });
+
+        let currentEditId = null;
+        const editModal = document.getElementById('edit-modal');
+        const editTextarea = document.getElementById('edit-textarea');
+        function openEditModal(id) {
+            const note = notes.find(n => n.id === id);
+            if (note) { 
+                currentEditId = id; editTextarea.value = note.text; 
+                const noteFont = note.font || fonts[0].family; selectFont('edit-font-dropdown', noteFont);
+                if(note.image) { currentEditImage = note.image; document.getElementById('edit-preview-img').src = note.image; document.getElementById('edit-image-container').style.display = 'block'; } 
+                else { removeEditImage(); }
+                editModal.classList.add('open'); 
+            }
+        }
+        function closeEditModal() { editModal.classList.remove('open'); currentEditId = null; }
+        function updateNote() {
+            if (currentEditId) { 
+                const note = notes.find(n => n.id === currentEditId); 
+                const newText = editTextarea.value.trim(); 
+                if (note && (newText || currentEditImage)) { 
+                    note.text = newText; note.font = currentEditFont; note.image = currentEditImage; 
+                    saveData(); closeEditModal(); 
+                } 
+            }
+        }
+        editModal.addEventListener('click', (e) => { if(e.target === editModal) closeEditModal(); });
+
+        renderNotes();
+    </script>
+</body>
+</html>
