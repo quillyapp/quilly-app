@@ -1,12 +1,13 @@
-const CACHE_NAME = 'quilly-v2-cache';
+const CACHE_NAME = 'quilly-v4-final';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon.png' 
+  './icon.png'
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
